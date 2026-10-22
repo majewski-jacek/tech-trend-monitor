@@ -25,7 +25,8 @@ COPY alembic ./alembic
 COPY app ./app
 COPY docker-entrypoint.sh .
 
-RUN chmod +x docker-entrypoint.sh
+RUN sed -i 's/\r$//' docker-entrypoint.sh && \
+    chmod +x docker-entrypoint.sh
 
 # Expose HTTP / WebSocket port
 EXPOSE 8000

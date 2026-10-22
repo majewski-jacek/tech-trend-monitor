@@ -1,9 +1,51 @@
-venv/ 
-.venv/ 
-__pycache__/ 
-*.pyc 
-*.db 
-*.sqlite3 
-.env 
-.pytest_cache/ 
-app.egg-info/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Environment Variables & Local Settings
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# SQLite Databases & Journal / WAL / SHM files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+tech_monitor.db
+tech_monitor.db-journal
+tech_monitor.db-wal
+tech_monitor.db-shm
+
+# IDEs & Code Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System Files
+.DS_Store
+Thumbs.db
