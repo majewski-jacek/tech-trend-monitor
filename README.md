@@ -1,5 +1,11 @@
 # 🚀 TechTrend Monitor & Live Sentiment Dashboard
 
+[![CI Test Suite](https://github.com/majewski-jacek/tech-trend-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/majewski-jacek/tech-trend-monitor/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?logo=fastapi&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v3.7%2B-2496ED?logo=docker&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 W pełni działająca, odporna na awarie i skonteneryzowana aplikacja do monitorowania i analizy sentymentu oraz trendów technologicznych z nowoczesnym dashboardem w czasie rzeczywistym.
 
 ---
