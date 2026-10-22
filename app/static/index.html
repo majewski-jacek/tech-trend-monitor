@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechTrend Monitor | Live Sentiment & Tech Trends</title>
+    <!-- Tailwind CSS CDN with configuration -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .pulse-dot {
+            animation: pulse-animation 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-animation {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.15); }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="activity" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">TechTrend</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Live AI Monitor</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Analiza trendów i sentymentu w czasie rzeczywistym</p>
+                </div>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <!-- WebSocket Live Status Indicator -->
+                <div id="ws-status-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all bg-emerald-950/40 border-emerald-800/60 text-emerald-400">
+                    <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                    <span id="ws-status-text">LIVE (WebSocket)</span>
+                </div>
+
+                <!-- Manual Sync Trigger Button -->
+                <button id="btn-sync" onclick="handleManualSync()" class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all shadow-md shadow-indigo-600/20 border border-indigo-500/30">
+                    <i id="sync-icon" data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>Wymuś synchronizację</span>
+                </button>
+
+                <!-- Auth Navigation Section -->
+                <div id="auth-section" class="flex items-center space-x-2 pl-2 border-l border-slate-800">
+                    <!-- Guest View: Sign In Button -->
+                    <button id="btn-open-auth" onclick="openAuthModal()" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border border-slate-700">
+                        <i data-lucide="log-in" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Zaloguj się</span>
+                    </button>
+
+                    <!-- Authenticated View: User Info & Logout (hidden by default) -->
+                    <div id="user-profile-badge" class="hidden flex items-center space-x-2">
+                        <div class="flex items-center space-x-2 bg-slate-800/90 border border-slate-700 px-2.5 py-1 rounded-lg">
+                            <div class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs uppercase" id="user-avatar">
+                                U
+                            </div>
+                            <span id="user-name" class="text-xs font-medium text-slate-200">user</span>
+                        </div>
+                        <button onclick="handleLogout()" title="Wyloguj" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Top Metric KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Metric 1: Total Articles -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Zmonitorowane artykuły</span>
+                    <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+                        <i data-lucide="newspaper" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-baseline space-x-2">
+                    <span id="stat-total-articles" class="text-3xl font-extrabold text-white">0</span>
+                    <span class="text-xs text-emerald-400 flex items-center font-medium">
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 mr-0.5"></i> Kanał na żywo
+                    </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Hacker News API & Public RSS</p>
+            </div>
+
+            <!-- Metric 2: Global Sentiment -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Indeks Sentymentu</span>
+                    <div id="stat-sentiment-icon-container" class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                        <i data-lucide="smile" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-baseline space-x-2">
+                    <span id="stat-sentiment-score" class="text-3xl font-extrabold text-white">0.00</span>
+                    <span id="stat-sentiment-badge" class="text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-300">
+                        Neutral
+                    </span>
+                </div>
+                <!-- Visual Sentiment Range Bar -->
+                <div class="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                    <div id="stat-sentiment-bar" class="h-full bg-emerald-400 transition-all duration-500" style="width: 50%;"></div>
+                </div>
+            </div>
+
+            <!-- Metric 3: Top Trending Tech -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Lider Trendów Tech</span>
+                    <div class="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                        <i data-lucide="flame" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span id="stat-top-tag" class="text-2xl font-extrabold text-white tracking-tight">AI & LLM</span>
+                    <p id="stat-top-tag-count" class="text-xs text-slate-400 mt-0.5">Najczęściej wzmiankowana technologia</p>
+                </div>
+            </div>
+
+            <!-- Metric 4: Real-time Telemetry Status -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Ostatnia Synchronizacja</span>
+                    <div class="p-2 rounded-xl bg-sky-500/10 text-sky-400">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <span id="stat-last-sync" class="text-3xl font-extrabold text-white tracking-tight">Teraz</span>
+                    <p id="stat-worker-status" class="text-xs text-emerald-400 mt-1 flex items-center">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5"></span> Asynchroniczny worker aktywny
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section (3 Grid Charts) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Chart 1: Tech Trends (Bar) -->
+            <div class="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-white flex items-center space-x-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Popularność Technologii (Wystąpienia w Feedzie)</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Częstotliwość występowania kluczowych technologii i frameworków</p>
+                    </div>
+                    <span class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-mono">Top Tags</span>
+                </div>
+                <div class="h-64 w-full relative">
+                    <canvas id="chart-tech-tags"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Sentiment Distribution (Doughnut) -->
+            <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-white flex items-center space-x-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i>
+                            <span>Rozkład Sentymentu</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Podział artykułów na kategorie wydźwięku</p>
+                    </div>
+                </div>
+                <div class="h-64 w-full flex items-center justify-center relative">
+                    <canvas id="chart-sentiment-distribution"></canvas>
+                </div>
+                <!-- Legend summary -->
+                <div class="grid grid-cols-3 gap-2 text-center text-xs pt-2 border-t border-slate-800/60">
+                    <div>
+                        <span class="text-emerald-400 font-semibold" id="leg-pos-count">0</span>
+                        <p class="text-slate-400 text-[10px]">Pozytywne</p>
+                    </div>
+                    <div>
+                        <span class="text-slate-300 font-semibold" id="leg-neu-count">0</span>
+                        <p class="text-slate-400 text-[10px]">Neutralne</p>
+                    </div>
+                    <div>
+                        <span class="text-rose-400 font-semibold" id="leg-neg-count">0</span>
+                        <p class="text-slate-400 text-[10px]">Negatywne</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full-width Sentiment Timeline Chart -->
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-base font-semibold text-white flex items-center space-x-2">
+                        <i data-lucide="trending-up" class="w-4 h-4 text-sky-400"></i>
+                        <span>Trajektoria Sentymentu w Czasie (Trend Time-Series)</span>
+                    </h2>
+                    <p class="text-xs text-slate-400">Średni wynik nastrojów branżowych w relacji czasowej</p>
+                </div>
+            </div>
+            <div class="h-64 w-full relative">
+                <canvas id="chart-sentiment-timeline"></canvas>
+            </div>
+        </div>
+
+        <!-- Filter, Search and Data Table Section -->
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 space-y-4">
+            <!-- Filter Bar -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <!-- Search Bar -->
+                <div class="relative flex-1 max-w-md">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input id="input-search" type="text" placeholder="Szukaj artykułów, tagów lub autorów..." 
+                        class="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all">
+                </div>
+
+                <!-- Select Filters -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Tag Filter -->
+                    <select id="select-tag" onchange="handleFilterChange()" class="bg-slate-950/80 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                        <option value="">Wszystkie technologie</option>
+                        <option value="AI">AI / Sztuczna Inteligencja</option>
+                        <option value="LLM">LLM / Duże Modele</option>
+                        <option value="Python">Python</option>
+                        <option value="Rust">Rust</option>
+                        <option value="JavaScript">JavaScript</option>
+                        <option value="TypeScript">TypeScript</option>
+                        <option value="Go">Go</option>
+                        <option value="Cloud">Cloud / Chmura</option>
+                        <option value="DevOps">DevOps / Docker / K8s</option>
+                        <option value="Security">Cyberbezpieczeństwo</option>
+                        <option value="Web">Web / Frontend</option>
+                        <option value="Database">Bazy danych</option>
+                        <option value="Linux">Linux</option>
+                    </select>
+
+                    <!-- Sentiment Filter -->
+                    <select id="select-sentiment" onchange="handleFilterChange()" class="bg-slate-950/80 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                        <option value="">Wszystkie sentymenty</option>
+                        <option value="Positive">Pozytywny</option>
+                        <option value="Neutral">Neutralny</option>
+                        <option value="Negative">Negatywny</option>
+                    </select>
+
+                    <!-- Sort By -->
+                    <select id="select-sort" onchange="handleFilterChange()" class="bg-slate-950/80 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
+                        <option value="created_at">Najnowsze</option>
+                        <option value="score">Najwyższy wynik (HN Score)</option>
+                        <option value="sentiment_score">Najwyższy sentyment</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Real-time Live Badge Notification (dynamic) -->
+            <div id="live-new-alert" class="hidden bg-indigo-950/40 border border-indigo-500/40 text-indigo-300 px-4 py-2 rounded-xl text-xs flex items-center justify-between transition-all">
+                <span class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400 pulse-dot mr-2"></span>
+                    <span id="live-new-text">Nowe artykuły pobrane na żywo przez WebSocket!</span>
+                </span>
+                <button onclick="refreshData()" class="underline font-semibold hover:text-white">Odśwież widok</button>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto rounded-xl border border-slate-800/80">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="bg-slate-950 text-xs uppercase text-slate-400 border-b border-slate-800">
+                        <tr>
+                            <th class="px-4 py-3.5 font-semibold">Tytuł Artykułu / Wpisu</th>
+                            <th class="px-4 py-3.5 font-semibold">Sentyment</th>
+                            <th class="px-4 py-3.5 font-semibold">Wykryte Technologie</th>
+                            <th class="px-4 py-3.5 font-semibold text-center">Score / Komentarze</th>
+                            <th class="px-4 py-3.5 font-semibold text-right">Data</th>
+                        </tr>
+                    </thead>
+                    <tbody id="articles-table-body" class="divide-y divide-slate-800/60 font-normal">
+                        <!-- Filled by JS -->
+                        <tr>
+                            <td colspan="5" class="text-center py-10 text-slate-500">Ładowanie danych...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div class="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3 pt-2">
+                <div id="pagination-info">Pokazywanie 0 z 0 wpisów</div>
+                <div class="flex items-center space-x-2">
+                    <button id="btn-prev-page" onclick="changePage(-1)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 text-slate-200 transition-colors">
+                        Poprzednia
+                    </button>
+                    <span id="current-page-display" class="px-2 font-mono text-slate-300">Strona 1</span>
+                    <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 text-slate-200 transition-colors">
+                        Następna
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-4 text-center text-xs text-slate-500">
+        TechTrend Monitor &copy; 2026 &bull; FastAPI + WebSocket + SQLite/PostgreSQL + Tailwind CSS &bull; 100% Skonteneryzowane
+    </footer>
+
+    <!-- Auth Modal (Login / Register) -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl relative space-y-5">
+            <!-- Close Button -->
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Tabs: Login vs Register -->
+            <div class="flex border-b border-slate-800 pb-2 space-x-6 text-sm font-semibold">
+                <button id="tab-login" onclick="switchAuthTab('login')" class="text-indigo-400 border-b-2 border-indigo-500 pb-2 transition-all">
+                    Logowanie
+                </button>
+                <button id="tab-register" onclick="switchAuthTab('register')" class="text-slate-400 hover:text-slate-200 pb-2 transition-all">
+                    Rejestracja
+                </button>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="auth-error-banner" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs"></div>
+
+            <!-- Login Form -->
+            <form id="form-login" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nazwa użytkownika lub Email</label>
+                    <input id="login-identifier" type="text" required placeholder="np. admin lub admin@example.com"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Hasło</label>
+                    <input id="login-password" type="password" required placeholder="••••••••"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <button type="submit" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-indigo-600/30">
+                    Zaloguj się
+                </button>
+                <!-- Quick Demo Fill -->
+                <button type="button" onclick="fillDemoAdminCredentials()" class="w-full py-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                    Wypełnij testowe dane (admin / admin123)
+                </button>
+            </form>
+
+            <!-- Register Form (hidden by default) -->
+            <form id="form-register" onsubmit="handleRegisterSubmit(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nazwa użytkownika</label>
+                    <input id="register-username" type="text" required minlength="3" placeholder="np. tech_analyst"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Adres Email</label>
+                    <input id="register-email" type="email" required placeholder="np. user@domain.com"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Hasło (min. 6 znaków)</label>
+                    <input id="register-password" type="password" required minlength="6" placeholder="••••••••"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <button type="submit" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-emerald-600/30">
+                    Utwórz konto
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Frontend Application Logic -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

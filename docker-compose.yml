@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: tech_trend_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tech_monitor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tech_monitor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tech_trend_web
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:postgrespassword@db:5432/tech_monitor
+      SECRET_KEY: dev-super-secret-key-change-for-production-123456
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+      SYNC_INTERVAL_SECONDS: 180
+      MAX_FEED_ITEMS: 30
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  pgdata:
+    driver: local
