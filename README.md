@@ -34,38 +34,27 @@ W pełni działająca, odporna na awarie i skonteneryzowana aplikacja do monitor
 
 ## 🏛️ Architektura Systemu
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       PRZEGLĄDARKA                         │
-│   Dashboard (Tailwind CSS + Chart.js + Lucide + Vanilla JS) │
-└──────────────┬──────────────────────────────▲───────────────┘
-               │ HTTP REST API                │ WebSockets
-               │ (/api/v1/... lub /api/...)   │ (/ws)
-┌──────────────▼──────────────────────────────┴───────────────┐
-│                    FASTAPI BACKEND                          │
-│                                                             │
-│  ┌────────────────┐   ┌─────────────────┐   ┌────────────┐  │
-│  │ Auth & Blacklist│  │ Articles & API  │   │ WS Manager │  │
-│  │ (bcrypt + JTI) │   │ (Search/Filter) │   │ Broadcast  │  │
-│  └────────────────┘   └─────────────────┘   └────────────┘  │
-│                                                     ▲       │
-│  ┌───────────────────────────────────────────────┐  │       │
-│  │ Asynchroniczny Worker w Tle (Scheduler Loop)  │──┘       │
-│  │  - Pobieranie z Hacker News Firebase API      │          │
-│  │  - Pętlowy Mutex (asyncio.Lock Concurrency)   │          │
-│  │  - Analiza NLP (Sentyment + Tech Taxonomy)    │          │
-│  │  - Zapis historii trendów czasowych           │          │
-│  └───────────────────────┬───────────────────────┘          │
-└──────────────────────────┼──────────────────────────────────┘
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│          BAZA DANYCH (PostgreSQL / SQLite via ORM)          │
-│          - users: konta i hashe haseł                       │
-│          - articles: artykuły, sentyment, tagi, keywords    │
-│          - trend_snapshots: historia czasowa trendów        │
-│          - revoked_tokens: czarna lista unieważnionych JWT  │
-│          - sync_metadata: precyzyjne znaczniki operacji     │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Client["🖥️ PRZEGLĄDARKA\nDashboard UI (Tailwind CSS + Chart.js + Vanilla JS)"]
+    
+    subgraph API_Layer["⚡ FASTAPI BACKEND"]
+        Auth["Auth & Token Blacklist (bcrypt + JTI)"]
+        API["Articles & Trends API"]
+        WS["WebSocket Manager (Live Broadcast)"]
+        Worker["Asynchroniczny Worker (Hacker News API + NLP Engine)"]
+    end
+
+    Storage[("🗄️ BAZA DANYCH\nPostgreSQL / SQLite via ORM")]
+
+    Client -->|"HTTP Auth (/auth/login, logout)"| Auth
+    Client -->|"HTTP REST API (/api/v1/...)"| API
+    Client <-->|"WebSockets Live (/ws)"| WS
+
+    Worker -->|"Broadcast zmian"| WS
+    Worker -->|"Zapis snapshotów & metadanych"| Storage
+    Auth --> Storage
+    API --> Storage
 ```
 
 ---
