@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
@@ -110,7 +110,7 @@ def logout(
     payload = decode_access_token(token)
     jti = payload.get("jti") if payload else None
     exp_timestamp = payload.get("exp") if payload else None
-    expires_at = datetime.utcfromtimestamp(exp_timestamp) if exp_timestamp else None
+    expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc) if exp_timestamp else None
 
     # Idempotent write to blacklist
     existing = db.query(RevokedToken).filter(RevokedToken.token == token).first()

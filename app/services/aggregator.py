@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
@@ -215,7 +215,7 @@ class TechDataAggregator:
             published_at = None
             if item.get("time"):
                 try:
-                    published_at = datetime.utcfromtimestamp(item["time"])
+                    published_at = datetime.fromtimestamp(item["time"], tz=timezone.utc)
                 except Exception:
                     published_at = now
 
@@ -283,7 +283,7 @@ class TechDataAggregator:
                 tag_counts[tag] = tag_counts.get(tag, 0) + 1
                 tag_sentiment_sums[tag] = tag_sentiment_sums.get(tag, 0.0) + art.sentiment_score
 
-        now = datetime.utcnow()
+        now = utc_now()
         for tag, count in tag_counts.items():
             avg_sent = round(tag_sentiment_sums[tag] / count, 3) if count > 0 else 0.0
             snapshot = TrendSnapshot(

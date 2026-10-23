@@ -1,4 +1,4 @@
-# Multi-stage lean Dockerfile for TechTrend Monitor
+# Lean production Dockerfile for TechTrend Monitor
 FROM python:3.10-slim
 
 # Prevent Python from writing .pyc files and enable unbuffered logging

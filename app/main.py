@@ -25,8 +25,20 @@ logger = logging.getLogger("main")
 
 
 def init_db_and_seed():
-    """Initializes schema and seeds default admin account and initial tech stories if empty."""
-    Base.metadata.create_all(bind=engine)
+    """Initializes schema via Alembic migrations and seeds default admin account and initial tech stories if empty."""
+    try:
+        from alembic.config import Config
+        from alembic import command
+        alembic_ini_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "alembic.ini"))
+        if os.path.exists(alembic_ini_path):
+            alembic_cfg = Config(alembic_ini_path)
+            command.upgrade(alembic_cfg, "head")
+        else:
+            Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning(f"Alembic auto-upgrade skipped or failed ({e}). Falling back to Base.metadata.create_all().")
+        Base.metadata.create_all(bind=engine)
+
     db = SessionLocal()
     try:
         # Seed default demo admin account if no users exist
@@ -54,14 +66,16 @@ def init_db_and_seed():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler managing database initialization and background worker."""
-    logger.info("Initializing TechTrend Monitor application...")
-    init_db_and_seed()
-    # Start periodic background ingestion worker
-    background_worker.start()
+    if not os.getenv("TESTING"):
+        logger.info("Initializing TechTrend Monitor application...")
+        init_db_and_seed()
+        # Start periodic background ingestion worker
+        background_worker.start()
     yield
-    # Graceful shutdown
-    logger.info("Shutting down background workers...")
-    await background_worker.stop()
+    if not os.getenv("TESTING"):
+        # Graceful shutdown
+        logger.info("Shutting down background workers...")
+        await background_worker.stop()
 
 
 app = FastAPI(

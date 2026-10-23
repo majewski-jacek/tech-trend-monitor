@@ -1,6 +1,6 @@
-from datetime import datetime
 from sqlalchemy import Column, DateTime, String
 from app.core.database import Base
+from app.core.datetime_utils import utc_now
 
 
 class SyncMetadata(Base):
@@ -8,5 +8,5 @@ class SyncMetadata(Base):
     __tablename__ = "sync_metadata"
 
     key = Column(String(50), primary_key=True, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=utc_now, nullable=False)
     details = Column(String(255), nullable=True)

@@ -1,6 +1,6 @@
-from datetime import datetime
 from sqlalchemy import Column, DateTime, Float, Integer, String
 from app.core.database import Base
+from app.core.datetime_utils import utc_now
 
 
 class TrendSnapshot(Base):
@@ -11,4 +11,4 @@ class TrendSnapshot(Base):
     tag = Column(String(100), index=True, nullable=False)
     count = Column(Integer, default=0, nullable=False)
     avg_sentiment = Column(Float, default=0.0, nullable=False)
-    recorded_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    recorded_at = Column(DateTime, default=utc_now, nullable=False, index=True)

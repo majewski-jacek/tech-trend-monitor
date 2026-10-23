@@ -1,6 +1,6 @@
-from datetime import datetime
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text
 from app.core.database import Base
+from app.core.datetime_utils import utc_now
 
 
 class Article(Base):
@@ -22,4 +22,4 @@ class Article(Base):
     tags = Column(Text, default="[]", nullable=False)  # JSON-encoded array of matched tech tags
     
     published_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now, nullable=False, index=True)

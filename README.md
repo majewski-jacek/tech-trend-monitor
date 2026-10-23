@@ -3,7 +3,7 @@
 [![CI Test Suite](https://github.com/majewski-jacek/tech-trend-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/majewski-jacek/tech-trend-monitor/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?logo=fastapi&logoColor=white)
-![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v3.7%2B-2496ED?logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v2%2B-2496ED?logo=docker&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 W pełni działająca, odporna na awarie i skonteneryzowana aplikacja do monitorowania i analizy sentymentu oraz trendów technologicznych z nowoczesnym dashboardem w czasie rzeczywistym.
@@ -96,7 +96,7 @@ Aplikacja jest w pełni zabezpieczona przed przerwami w dostępie do Internetu i
 
 Całe środowisko (PostgreSQL + aplikacja FastAPI + worker w tle + dashboard) uruchamia się za pomocą Docker Compose.
 
-Dzięki schematowi `version: '3.7'` oraz standardowej liście zależności `depends_on: [db]`, konfiguracja jest w 100% kompatybilna zarówno z nowoczesnym pluginem CLI, jak i starszymi środowiskami (np. WSL2 / Docker Compose v1.25+):
+Dzięki standardowej specyfikacji Compose oraz liście zależności `depends_on: [db]`, konfiguracja jest w 100% kompatybilna zarówno z nowoczesnym pluginem CLI (`docker compose`), jak i środowiskami standalone (`docker-compose`):
 
 **Nowoczesne Docker Compose (v2+ plugin CLI):**
 ```bash

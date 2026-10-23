@@ -1,6 +1,11 @@
 import asyncio
 import os
 import sys
+
+# Isolate test environment and database before importing any application modules
+os.environ["TESTING"] = "1"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient

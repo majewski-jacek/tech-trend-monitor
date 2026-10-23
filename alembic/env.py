@@ -52,6 +52,32 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        from sqlalchemy import inspect
+        inspector = inspect(connection)
+        tables = inspector.get_table_names()
+        has_articles = "articles" in tables
+        has_alembic_ver = "alembic_version" in tables
+        version_rows = []
+        if has_alembic_ver:
+            try:
+                version_rows = connection.exec_driver_sql("SELECT version_num FROM alembic_version").fetchall()
+            except Exception:
+                version_rows = []
+
+        # Self-heal unversioned or legacy database: if schema already exists but alembic_version is missing/empty
+        if has_articles and (not has_alembic_ver or len(version_rows) == 0):
+            from alembic.script import ScriptDirectory
+            script = ScriptDirectory.from_config(config)
+            head_rev = script.get_current_head()
+            if not has_alembic_ver:
+                connection.exec_driver_sql(
+                    "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
+                )
+            connection.exec_driver_sql(
+                f"INSERT INTO alembic_version (version_num) VALUES ('{head_rev}')"
+            )
+            connection.commit()
+
         context.configure(
             connection=connection, target_metadata=target_metadata
         )
