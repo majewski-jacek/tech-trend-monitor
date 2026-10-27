@@ -9,10 +9,9 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1 import api_router
 from app.api.v1.ws import router as ws_router
 from app.core.config import settings
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal, engine
 from app.core.security import hash_password
-from app.models.article import Article
-from app.models.user import User
+from app.models import Base, Article, User, TrendSnapshot, SyncMetadata, RevokedToken
 from app.services.aggregator import SEED_TECH_STORIES, TechDataAggregator
 from app.worker.scheduler import background_worker
 
@@ -25,7 +24,7 @@ logger = logging.getLogger("main")
 
 
 def init_db_and_seed():
-    """Initializes schema via Alembic migrations and seeds default admin account and initial tech stories if empty."""
+    """Initializes schema via Alembic migrations, ensures all tables exist, and seeds default data."""
     try:
         from alembic.config import Config
         from alembic import command
@@ -33,11 +32,11 @@ def init_db_and_seed():
         if os.path.exists(alembic_ini_path):
             alembic_cfg = Config(alembic_ini_path)
             command.upgrade(alembic_cfg, "head")
-        else:
-            Base.metadata.create_all(bind=engine)
     except Exception as e:
         logger.warning(f"Alembic auto-upgrade skipped or failed ({e}). Falling back to Base.metadata.create_all().")
-        Base.metadata.create_all(bind=engine)
+
+    # Ensure all registered tables exist (idempotent, checkfirst=True)
+    Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
     try:
@@ -88,7 +87,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

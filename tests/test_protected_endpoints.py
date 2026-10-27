@@ -78,4 +78,4 @@ async def test_sync_network_failure_returns_503(async_client, auth_headers):
         assert response.status_code == 503
         data = response.json()
         assert "detail" in data
-        assert "Brak połączenia z zewnętrznym API Hacker News" in data["detail"]
+        assert "Could not connect to external Hacker News API" in data["detail"]

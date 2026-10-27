@@ -76,7 +76,7 @@ def login(login_data: UserLogin, response: Response, db: Session = Depends(get_d
         httponly=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False  # Set to True in production with HTTPS
+        secure=settings.is_cookie_secure
     )
 
     return Token(
@@ -103,7 +103,7 @@ def logout(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Brak tokena do unieważnienia",
+            detail="No token provided for revocation",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -126,7 +126,7 @@ def logout(
     response.delete_cookie(key="access_token")
     return {
         "status": "success",
-        "message": "Pomyślnie wylogowano. Token został unieważniony.",
+        "message": "Successfully logged out. Token has been revoked.",
         "revoked": True
     }
 

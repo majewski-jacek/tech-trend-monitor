@@ -31,13 +31,13 @@ async def trigger_sync(
         logger.warning(f"Manual sync failed: external API unreachable ({e})")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Brak połączenia z zewnętrznym API Hacker News. Sprawdź połączenie z internetem."
+            detail="Could not connect to external Hacker News API. Check internet connectivity."
         )
 
     if new_count > 0:
-        message = f"Pobrano i przeanalizowano {new_count} nowych artykułów."
+        message = f"Fetched and processed {new_count} new articles."
     else:
-        message = "Baza jest aktualna. Brak nowych wpisów w API."
+        message = "Database is up to date. No new articles found in API."
 
     return SyncResultResponse(
         status="success",

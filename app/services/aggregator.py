@@ -146,7 +146,7 @@ class TechDataAggregator:
             return ids[:limit] if isinstance(ids, list) else []
         except (httpx.RequestError, httpx.HTTPStatusError, asyncio.TimeoutError) as e:
             logger.error(f"Failed to reach Hacker News API endpoint {url}: {e}")
-            raise HackerNewsAPIError(f"Brak połączenia z zewnętrznym API Hacker News: {e}") from e
+            raise HackerNewsAPIError(f"Could not connect to external Hacker News API: {e}") from e
 
     @classmethod
     async def fetch_hn_item(cls, client: httpx.AsyncClient, item_id: int) -> Optional[Dict[str, Any]]:
@@ -185,7 +185,7 @@ class TechDataAggregator:
             if fallback_to_seed:
                 logger.warning("Using fallback curated tech dataset (fallback_to_seed=True).")
                 return SEED_TECH_STORIES
-            raise HackerNewsAPIError(f"Brak połączenia z zewnętrznym API Hacker News: {e}") from e
+            raise HackerNewsAPIError(f"Could not connect to external Hacker News API: {e}") from e
         finally:
             await client.aclose()
             await asyncio.sleep(0.01)
@@ -320,7 +320,7 @@ class TechDataAggregator:
                 await ws_manager.broadcast({
                     "type": "SYNC_STATUS",
                     "status": "failed",
-                    "error": "Brak połączenia z zewnętrznym API Hacker News. Sprawdź połączenie z internetem.",
+                    "error": "Could not connect to external Hacker News API. Check internet connectivity.",
                     "timestamp": format_utc_iso(utc_now())
                 })
                 raise

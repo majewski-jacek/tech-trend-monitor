@@ -78,6 +78,9 @@ def run_migrations_online() -> None:
             )
             connection.commit()
 
+        # Ensure all models defined in metadata exist (creates any missing tables idempotently)
+        target_metadata.create_all(bind=connection, checkfirst=True)
+
         context.configure(
             connection=connection, target_metadata=target_metadata
         )

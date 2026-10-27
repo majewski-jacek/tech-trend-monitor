@@ -67,7 +67,7 @@ def get_current_user(
     if is_revoked:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token został unieważniony",
+            detail="Token has been revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

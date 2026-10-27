@@ -137,14 +137,14 @@ def test_logout_with_token_blacklists_token(client):
     logout_res = client.post("/api/v1/auth/logout", headers=headers)
     assert logout_res.status_code == 200
     assert logout_res.json()["revoked"] is True
-    assert "Token został unieważniony" in logout_res.json()["message"]
+    assert "Token has been revoked" in logout_res.json()["message"]
 
-    # 4. After logout: using the old token must return 401 Unauthorized with "Token został unieważniony"
+    # 4. After logout: using the old token must return 401 Unauthorized with "Token has been revoked"
     me_res2 = client.get("/api/v1/auth/me", headers=headers)
     assert me_res2.status_code == 401
-    assert "Token został unieważniony" in me_res2.json()["detail"]
+    assert "Token has been revoked" in me_res2.json()["detail"]
 
     # 5. Using it on another protected endpoint (e.g. sync) must also be blocked
     sync_res = client.post("/api/v1/sync", headers=headers)
     assert sync_res.status_code == 401
-    assert "Token został unieważniony" in sync_res.json()["detail"]
+    assert "Token has been revoked" in sync_res.json()["detail"]

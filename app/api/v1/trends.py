@@ -27,8 +27,11 @@ def get_trends_summary(db: Session = Depends(get_db)):
     total_articles = db.query(Article).count()
 
     # Query persistent sync metadata for the exact last sync execution timestamp
-    sync_meta = db.query(SyncMetadata).filter(SyncMetadata.key == "last_sync_timestamp").first()
-    last_sync = sync_meta.timestamp if sync_meta else None
+    try:
+        sync_meta = db.query(SyncMetadata).filter(SyncMetadata.key == "last_sync_timestamp").first()
+        last_sync = sync_meta.timestamp if sync_meta else None
+    except Exception:
+        last_sync = None
 
     if total_articles == 0:
         return DashboardStatsResponse(

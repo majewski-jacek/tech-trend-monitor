@@ -171,7 +171,7 @@ function handleWebSocketMessage(msg) {
         } else if (msg.status === "failed") {
             setSyncLoading(false);
             if (!state.isSyncing) {
-                showToast(msg.error || "Brak połączenia z zewnętrznym API Hacker News. Sprawdź połączenie z internetem.", "error");
+                showToast("Brak połączenia z zewnętrznym API Hacker News. Sprawdź połączenie z internetem.", "error");
             }
         } else if (msg.status === "completed") {
             setSyncLoading(false);
@@ -825,14 +825,18 @@ async function handleManualSync() {
 
         if (!res.ok) {
             let errorMsg = `Błąd synchronizacji (${res.status})`;
-            try {
-                const errData = await res.json();
-                if (errData && errData.detail) {
-                    errorMsg = errData.detail;
-                } else if (errData && errData.message) {
-                    errorMsg = errData.message;
-                }
-            } catch (_) {}
+            if (res.status === 503) {
+                errorMsg = "Brak połączenia z zewnętrznym API Hacker News. Sprawdź połączenie z internetem.";
+            } else {
+                try {
+                    const errData = await res.json();
+                    if (errData && errData.detail) {
+                        errorMsg = errData.detail;
+                    } else if (errData && errData.message) {
+                        errorMsg = errData.message;
+                    }
+                } catch (_) {}
+            }
             throw new Error(errorMsg);
         }
 
@@ -847,7 +851,7 @@ async function handleManualSync() {
 
         // Show single clear Polish notification
         if (data.new_articles_count > 0) {
-            showToast(data.message || `Pobrano i przeanalizowano ${data.new_articles_count} nowych artykułów!`, "success");
+            showToast(`Pobrano i przeanalizowano ${data.new_articles_count} nowych artykułów!`, "success");
         } else {
             showToast("Baza jest aktualna. Brak nowych wpisów w API.", "info");
         }
@@ -1048,7 +1052,7 @@ const activeToastTimestamps = new Map();
 
 function getToastDedupeKey(message) {
     const text = String(message).trim();
-    if (text.includes("Brak połączenia z zewnętrznym API")) {
+    if (text.includes("Brak połączenia z zewnętrznym API") || text.includes("Could not connect to external Hacker News API")) {
         return "ERR_API_CONNECTION_LOST";
     }
     return text;
@@ -1072,7 +1076,7 @@ function showToast(message, type = "info") {
     // 2. DOM-level deduplication: do not append if identical text or category is already displayed
     const alreadyVisible = Array.from(container.children).some(el => {
         const text = el.textContent || "";
-        if (dedupeKey === "ERR_API_CONNECTION_LOST" && text.includes("Brak połączenia z zewnętrznym API")) {
+        if (dedupeKey === "ERR_API_CONNECTION_LOST" && (text.includes("Brak połączenia z zewnętrznym API") || text.includes("Could not connect to external Hacker News API"))) {
             return true;
         }
         return text.trim().includes(cleanMsg);
