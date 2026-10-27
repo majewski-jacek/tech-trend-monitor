@@ -56,6 +56,8 @@ def run_migrations_online() -> None:
         inspector = inspect(connection)
         tables = inspector.get_table_names()
         has_articles = "articles" in tables
+        has_sync_meta = "sync_metadata" in tables
+        has_revoked_tokens = "revoked_tokens" in tables
         has_alembic_ver = "alembic_version" in tables
         version_rows = []
         if has_alembic_ver:
@@ -64,22 +66,23 @@ def run_migrations_online() -> None:
             except Exception:
                 version_rows = []
 
-        # Self-heal unversioned or legacy database: if schema already exists but alembic_version is missing/empty
+        # Self-heal unversioned legacy database: stamp revision based on existing tables so remaining migrations run
         if has_articles and (not has_alembic_ver or len(version_rows) == 0):
-            from alembic.script import ScriptDirectory
-            script = ScriptDirectory.from_config(config)
-            head_rev = script.get_current_head()
             if not has_alembic_ver:
                 connection.exec_driver_sql(
                     "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"
                 )
+            if has_revoked_tokens and has_sync_meta:
+                base_rev = "8b2e93ce9739"
+            elif has_sync_meta:
+                base_rev = "2b0254d11adf"
+            else:
+                base_rev = "783fa729e243"
+
             connection.exec_driver_sql(
-                f"INSERT INTO alembic_version (version_num) VALUES ('{head_rev}')"
+                f"INSERT INTO alembic_version (version_num) VALUES ('{base_rev}')"
             )
             connection.commit()
-
-        # Ensure all models defined in metadata exist (creates any missing tables idempotently)
-        target_metadata.create_all(bind=connection, checkfirst=True)
 
         context.configure(
             connection=connection, target_metadata=target_metadata
@@ -87,6 +90,7 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
+        connection.commit()
 
 
 if context.is_offline_mode():
